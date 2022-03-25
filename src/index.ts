@@ -14,8 +14,16 @@ const publicDirectoryPath = path.join(__dirname, "../public/");
 app.use(Express.static(publicDirectoryPath));
 
 io.on("connection", (socket) => {
-  socket.emit("message", generateMessage("welcome to socket"));
-  socket.broadcast.emit("message", generateMessage("A new user has joined!"));
+  socket.on("join", ({ username, room }) => {
+    console.log(username, room);
+
+    socket.join(room);
+
+    socket.emit("message", generateMessage("welcome"));
+    socket.broadcast
+      .to(room)
+      .emit("message", generateMessage(`${username} has joined!`));
+  });
 
   socket.on("send", (message, callback) => {
     const filter = new BadWordsFilter();
