@@ -20,12 +20,14 @@ socket.on("message", (welcomeMessage) => {
   const html = Mustache.render(messageTemplate, {
     message: welcomeMessage.text,
     createdAt: moment(welcomeMessage.createdAt).format("h:mm a"),
+    username: welcomeMessage.username,
   });
   $messages.insertAdjacentHTML("beforeend", html);
 });
 
 socket.on("locationMessage", (url) => {
   const html = Mustache.render(locationTemplate, {
+    username: url.username,
     url: url.url,
     createdAt: moment(url.createdAt).format("h:mm a"),
   });
@@ -72,7 +74,16 @@ locationInput.addEventListener("click", () => {
   });
 });
 
-socket.emit("join", {
-  username,
-  room,
-});
+socket.emit(
+  "join",
+  {
+    username,
+    room,
+  },
+  (error) => {
+    if (error) {
+      alert(error);
+      location.href = "/";
+    }
+  }
+);

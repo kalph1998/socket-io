@@ -4,6 +4,7 @@ import path from "path";
 import socket from "socket.io";
 import BadWordsFilter from "bad-words";
 import { generateMessage, generateLocationMessage } from "./utils/messages";
+import { addUser, getUser, getUsersInRoom, removeUser } from './utils/users'
 
 const app = Express();
 const server = http.createServer(app);
@@ -14,18 +15,32 @@ const publicDirectoryPath = path.join(__dirname, "../public/");
 app.use(Express.static(publicDirectoryPath));
 
 io.on("connection", (socket) => {
-  socket.on("join", ({ username, room }) => {
-    console.log(username, room);
+  socket.on("join", ({ username, room }, callback) => {
 
-    socket.join(room);
 
-    socket.emit("message", generateMessage("welcome"));
+    const { error, user } = addUser({ id: socket.id, username, room })
+
+    if (error) {
+      return callback(error)
+    }
+
+    socket.join(user?.room!);
+
+    socket.emit("message", generateMessage('Admin', "welcome"));
     socket.broadcast
-      .to(room)
-      .emit("message", generateMessage(`${username} has joined!`));
+      .to(user?.room!)
+      .emit("message", generateMessage(user?.username!, `${user?.username} has joined!`));
+
+    callback()
+
   });
 
   socket.on("send", (message, callback) => {
+
+
+    let user = getUser(socket.id)
+
+
     const filter = new BadWordsFilter();
 
     if (filter.isProfane(message)) {
@@ -33,21 +48,31 @@ io.on("connection", (socket) => {
       return;
     }
 
-    io.emit("message", generateMessage(message));
+    io.to(user!.room).emit("message", generateMessage(user?.username!, message));
     callback();
   });
   socket.on("disconnect", () => {
-    io.emit("message", generateMessage("user has left"));
+    let user = removeUser(socket.id)
+
+    if (user) {
+      io.to(user.room).emit("message", generateMessage('Admin', user?.username + " has left"));
+
+    }
+
   });
 
   socket.on("sendLocation", (location, callbacks) => {
-    io.emit(
+
+    let user = getUser(socket.id)
+
+    io.to(user?.room!).emit(
       "locationMessage",
       generateLocationMessage(
+        user?.username!,
         `https://google.com/maps?q=${location.latitude},${location.longitude}`
       )
     );
-    callbacks(generateLocationMessage("location is shared"));
+    callbacks(generateLocationMessage(user?.username!, "location is shared"));
   });
 });
 
