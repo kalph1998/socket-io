@@ -25,7 +25,24 @@ const addUser = ({ id, username, room }: user) => {
       error: "username already exists",
     };
   }
+
+  // store user
+
+  const user = { id, username, room }
+
+  users.push(user)
+  return { user }
+
+
 };
+
+
+
+
+
+export {
+  addUser
+}
 
 interface user {
   id: string;
